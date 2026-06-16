@@ -16,6 +16,24 @@ The first version should stay intentionally small:
 GET /availability-message?clubId=club-x
 ```
 
+## Run locally
+
+```bash
+node src/server.mjs
+```
+
+Then open:
+
+```http
+http://localhost:3000/availability-message?clubId=club-x
+```
+
+## Test
+
+```bash
+node --test
+```
+
 ## Target response
 
 ```json
@@ -29,4 +47,3 @@ GET /availability-message?clubId=club-x
   "message": "Disponibilidad de ultimo minuto hoy en Club X\n\n18:00 - Pista 2\n19:30 - Pistas 1 y 4\n\nEscribinos para reservar."
 }
 ```
-
