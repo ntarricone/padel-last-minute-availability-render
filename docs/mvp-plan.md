@@ -7,7 +7,7 @@ Build the smallest useful thing:
 1. API endpoint.
 2. One club config.
 3. Mock/manual availability.
-4. Filtering for today and evening.
+4. Filtering for today.
 5. Grouping by hour.
 6. Copy-ready message.
 
@@ -24,7 +24,6 @@ Rules:
 
 - Only today's slots.
 - Only slots after now.
-- Only configured promotion window, for example `18:00-22:00`.
 - Group courts by start time.
 
 ## Phase 2: minimal Playtomic adapter
@@ -69,4 +68,3 @@ Only after the endpoint works:
 ## Validation
 
 The MVP works if a club repeatedly copies and sends the generated message.
-

@@ -1,27 +1,29 @@
-import { getMockAvailability } from "./mock-availability.mjs";
+import { getPlaytomicAvailability } from "./playtomic-provider.mjs";
 import { generateMessage, groupSlots } from "./message.mjs";
 
-export async function buildAvailabilityMessage({ club, now = new Date() }) {
+export async function buildAvailabilityMessage({
+  club,
+  language = "es",
+  now = new Date(),
+}) {
   const today = now.toISOString().slice(0, 10);
-  const slots = getMockAvailability()
-    .filter((slot) => slot.startDate === today)
-    .filter((slot) => isWithinWindow(slot.startTime, club.promotionWindow));
+
+  const slots = await getPlaytomicAvailability({
+    tenantId: club.playtomicTenantId,
+    date: today,
+  });
 
   const groupedSlots = groupSlots(slots);
 
   return {
     club: club.name,
     date: today,
-    window: club.promotionWindow,
+    language,
     availableSlots: groupedSlots,
     message: generateMessage({
       clubName: club.name,
       groupedSlots,
+      language,
     }),
   };
 }
-
-function isWithinWindow(time, window) {
-  return time >= window.from && time <= window.to;
-}
-
