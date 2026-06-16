@@ -5,11 +5,7 @@ const HEADERS = {
   "X-Requested-With": "com.playtomic.app 6.13.0",
 };
 
-/**
- * Fetches court name mapping for a tenant.
- * Returns Map<resource_id, courtName>
- */
-async function fetchCourtNames(tenantId) {
+export async function getPlaytomicTenant(tenantId) {
   const response = await fetch(`${BASE_URL}/tenants/${tenantId}`, {
     headers: HEADERS,
   });
@@ -18,7 +14,15 @@ async function fetchCourtNames(tenantId) {
     throw new Error(`Failed to fetch tenant info: ${response.status}`);
   }
 
-  const tenant = await response.json();
+  return response.json();
+}
+
+/**
+ * Fetches court name mapping for a tenant.
+ * Returns Map<resource_id, courtName>
+ */
+async function fetchCourtNames(tenantId) {
+  const tenant = await getPlaytomicTenant(tenantId);
   const map = new Map();
 
   for (const resource of tenant.resources ?? []) {

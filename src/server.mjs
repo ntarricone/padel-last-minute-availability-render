@@ -1,6 +1,9 @@
 import http from "node:http";
 import { pathToFileURL } from "node:url";
-import { buildAvailabilityMessage } from "./availability.mjs";
+import {
+  AvailabilityDateError,
+  buildAvailabilityMessage,
+} from "./availability.mjs";
 import { clubs, getClubById } from "./club-config.mjs";
 import { normalizeLanguage, supportedLanguages } from "./message.mjs";
 
@@ -23,12 +26,32 @@ const documentedEndpoints = [
   {
     method: "GET",
     path: "/availability-message",
-    description: "Returns today's grouped availability and a copy-ready message.",
+    description: "Returns grouped availability and copy-ready messages for a date or date range.",
     queryParams: [
       {
         name: "clubId",
-        required: true,
+        required: false,
         description: "Club identifier. Use GET /clubs to discover valid values.",
+      },
+      {
+        name: "tenantId",
+        required: false,
+        description: "Raw Playtomic tenant identifier. Used when clubId is not provided.",
+      },
+      {
+        name: "date",
+        required: false,
+        description: "Single date to check, using YYYY-MM-DD. Defaults to today.",
+      },
+      {
+        name: "startDate",
+        required: false,
+        description: "Range start date, using YYYY-MM-DD. Must be used with endDate.",
+      },
+      {
+        name: "endDate",
+        required: false,
+        description: "Range end date, using YYYY-MM-DD. Must be used with startDate.",
       },
       {
         name: "lang",
@@ -38,7 +61,7 @@ const documentedEndpoints = [
         description: "Response language.",
       },
     ],
-    example: "/availability-message?clubId=canal-isabel-ii&lang=es",
+    example: "/availability-message?clubId=canal-isabel-ii&startDate=2026-06-16&endDate=2026-06-18&lang=es",
   },
   {
     method: "GET",
@@ -81,10 +104,16 @@ export const server = http.createServer(async (request, response) => {
 
     if (request.method === "GET" && url.pathname === "/availability-message") {
       const clubId = url.searchParams.get("clubId");
+      const tenantId = url.searchParams.get("tenantId");
+      const date = url.searchParams.get("date");
+      const startDate = url.searchParams.get("startDate");
+      const endDate = url.searchParams.get("endDate");
       const languageParam = url.searchParams.get("lang") ?? "es";
 
-      if (!clubId) {
-        sendJson(response, 400, { error: "clubId is required" });
+      if (!clubId && !tenantId) {
+        sendJson(response, 400, {
+          error: "clubId or tenantId is required",
+        });
         return;
       }
 
@@ -99,14 +128,33 @@ export const server = http.createServer(async (request, response) => {
         return;
       }
 
-      const club = getClubById(clubId);
+      const club = clubId ? getClubById(clubId) : null;
 
-      if (!club) {
+      if (clubId && !club) {
         sendJson(response, 404, { error: "club not found" });
         return;
       }
 
-      const payload = await buildAvailabilityMessage({ club, language });
+      let payload;
+
+      try {
+        payload = await buildAvailabilityMessage({
+          club,
+          tenantId: club?.playtomicTenantId ?? tenantId,
+          language,
+          date,
+          startDate,
+          endDate,
+        });
+      } catch (error) {
+        if (error instanceof AvailabilityDateError) {
+          sendJson(response, 400, { error: error.message });
+          return;
+        }
+
+        throw error;
+      }
+
       sendJson(response, 200, payload);
       return;
     }

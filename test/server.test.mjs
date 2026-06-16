@@ -47,8 +47,28 @@ test("GET /endpoints returns the available GET routes and their params", async (
     assert.deepEqual(availabilityEndpoint.queryParams, [
       {
         name: "clubId",
-        required: true,
+        required: false,
         description: "Club identifier. Use GET /clubs to discover valid values.",
+      },
+      {
+        name: "tenantId",
+        required: false,
+        description: "Raw Playtomic tenant identifier. Used when clubId is not provided.",
+      },
+      {
+        name: "date",
+        required: false,
+        description: "Single date to check, using YYYY-MM-DD. Defaults to today.",
+      },
+      {
+        name: "startDate",
+        required: false,
+        description: "Range start date, using YYYY-MM-DD. Must be used with endDate.",
+      },
+      {
+        name: "endDate",
+        required: false,
+        description: "Range end date, using YYYY-MM-DD. Must be used with startDate.",
       },
       {
         name: "lang",
@@ -78,5 +98,31 @@ test("GET /clubs returns curated clubs without provider internals", async () => 
     ]);
     assert.equal(payload.clubs[0].id, "canal-isabel-ii");
     assert.equal(payload.clubs[0].playtomicTenantId, undefined);
+  });
+});
+
+test("GET /availability-message requires clubId or tenantId", async () => {
+  await withTestServer(async (port) => {
+    const response = await fetch(`http://127.0.0.1:${port}/availability-message`);
+    const payload = await response.json();
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(payload, {
+      error: "clubId or tenantId is required",
+    });
+  });
+});
+
+test("GET /availability-message rejects invalid date params", async () => {
+  await withTestServer(async (port) => {
+    const response = await fetch(
+      `http://127.0.0.1:${port}/availability-message?tenantId=test-tenant&date=2026-99-16`,
+    );
+    const payload = await response.json();
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(payload, {
+      error: "date must be a valid date",
+    });
   });
 });

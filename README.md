@@ -1,6 +1,7 @@
 # Padel last-minute availability
 
-MVP to help padel clubs generate a copy-ready message with today's free courts.
+MVP to help padel clubs generate copy-ready messages with free courts for a
+specific date or date range.
 
 The first version should stay intentionally small:
 
@@ -139,12 +140,32 @@ Example response:
     {
       "method": "GET",
       "path": "/availability-message",
-      "description": "Returns today's grouped availability and a copy-ready message.",
+      "description": "Returns grouped availability and copy-ready messages for a date or date range.",
       "queryParams": [
         {
           "name": "clubId",
-          "required": true,
+          "required": false,
           "description": "Club identifier. Use GET /clubs to discover valid values."
+        },
+        {
+          "name": "tenantId",
+          "required": false,
+          "description": "Raw Playtomic tenant identifier. Used when clubId is not provided."
+        },
+        {
+          "name": "date",
+          "required": false,
+          "description": "Single date to check, using YYYY-MM-DD. Defaults to today."
+        },
+        {
+          "name": "startDate",
+          "required": false,
+          "description": "Range start date, using YYYY-MM-DD. Must be used with endDate."
+        },
+        {
+          "name": "endDate",
+          "required": false,
+          "description": "Range end date, using YYYY-MM-DD. Must be used with startDate."
         },
         {
           "name": "lang",
@@ -154,7 +175,7 @@ Example response:
           "description": "Response language."
         }
       ],
-      "example": "/availability-message?clubId=canal-isabel-ii&lang=es"
+      "example": "/availability-message?clubId=canal-isabel-ii&startDate=2026-06-16&endDate=2026-06-18&lang=es"
     },
     {
       "method": "GET",
@@ -169,26 +190,46 @@ Example response:
 
 ### `GET /availability-message`
 
-Returns today's grouped availability plus a ready-to-send message.
+Returns grouped availability plus ready-to-send messages.
 
 Query params:
 
-- `clubId` required
+- `clubId` optional
+- `tenantId` optional
+- provide at least one of `clubId` or `tenantId`
+- `date` optional: single date in `YYYY-MM-DD`
+- `startDate` optional: range start date in `YYYY-MM-DD`
+- `endDate` optional: range end date in `YYYY-MM-DD`
 - `lang` optional: `es`, `en`, `de`
+- if no date params are sent, the API checks today
+- use either `date` or `startDate` plus `endDate`
+- date ranges are inclusive and can cover up to 14 days
 
 Example in Spanish:
 
 ```http
-GET /availability-message?clubId=canal-isabel-ii&lang=es
+GET /availability-message?clubId=canal-isabel-ii&date=2026-06-16&lang=es
+```
+
+Example for a date range:
+
+```http
+GET /availability-message?clubId=canal-isabel-ii&startDate=2026-06-16&endDate=2026-06-18&lang=es
+```
+
+Example using a raw Playtomic tenant:
+
+```http
+GET /availability-message?tenantId=0e49df0b-6cd7-4459-b98f-80666079714d&lang=de
 ```
 
 Example with `curl`:
 
 ```bash
-curl "http://localhost:3000/availability-message?clubId=canal-isabel-ii&lang=en"
+curl "http://localhost:3000/availability-message?clubId=canal-isabel-ii&date=2026-06-16&lang=en"
 ```
 
-Example response shape:
+Single-date response shape:
 
 ```json
 {
@@ -199,17 +240,59 @@ Example response shape:
     { "time": "18:00", "courts": ["Pista 2"] },
     { "time": "19:30", "courts": ["Pista 1", "Pista 4"] }
   ],
-  "message": "Last-minute availability today at FMP Canal de Isabel II\n\n18:00 - Pista 2\n19:30 - Pista 1 and Pista 4\n\nMessage us to book."
+  "message": "Last-minute availability today at FMP Canal de Isabel II\n\n18:00 - Pista 2\n19:30 - Pista 1 and Pista 4\n\nMessage us to book.",
+  "results": [
+    {
+      "date": "2026-06-16",
+      "availableSlots": [
+        { "time": "18:00", "courts": ["Pista 2"] },
+        { "time": "19:30", "courts": ["Pista 1", "Pista 4"] }
+      ],
+      "message": "Last-minute availability today at FMP Canal de Isabel II\n\n18:00 - Pista 2\n19:30 - Pista 1 and Pista 4\n\nMessage us to book."
+    }
+  ]
+}
+```
+
+Date-range response shape:
+
+```json
+{
+  "club": "FMP Canal de Isabel II",
+  "startDate": "2026-06-16",
+  "endDate": "2026-06-18",
+  "language": "en",
+  "results": [
+    {
+      "date": "2026-06-16",
+      "availableSlots": [
+        { "time": "18:00", "courts": ["Pista 2"] }
+      ],
+      "message": "Last-minute availability today at FMP Canal de Isabel II\n\n18:00 - Pista 2\n\nMessage us to book."
+    },
+    {
+      "date": "2026-06-17",
+      "availableSlots": [
+        { "time": "19:30", "courts": ["Pista 1", "Pista 4"] }
+      ],
+      "message": "Last-minute availability on 2026-06-17 at FMP Canal de Isabel II\n\n19:30 - Pista 1 and Pista 4\n\nMessage us to book."
+    },
+    {
+      "date": "2026-06-18",
+      "availableSlots": [],
+      "message": "We do not see any free courts at FMP Canal de Isabel II on 2026-06-18.\n\nWe will let you know if one opens up."
+    }
+  ]
 }
 ```
 
 ### Common errors
 
-Missing `clubId`:
+Missing `clubId` and `tenantId`:
 
 ```json
 {
-  "error": "clubId is required"
+  "error": "clubId or tenantId is required"
 }
 ```
 
@@ -226,6 +309,14 @@ Invalid `lang`:
 ```json
 {
   "error": "lang must be one of: es, en, de"
+}
+```
+
+Invalid date:
+
+```json
+{
+  "error": "date must be a valid date"
 }
 ```
 

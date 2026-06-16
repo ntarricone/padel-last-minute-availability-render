@@ -17,28 +17,35 @@ export function groupSlots(slots) {
 
 const translations = {
   es: {
-    noSlots: (clubName) =>
-      `Hoy no vemos pistas libres en ${clubName}.`,
+    todayLabel: "hoy",
+    dateLabel: (date) => `el ${date}`,
+    noSlots: (clubName, dateLabel) =>
+      `No vemos pistas libres ${dateLabel} en ${clubName}.`,
     noSlotsFollowUp: "Te avisamos si se libera alguna.",
-    title: (clubName) =>
-      `Disponibilidad de ultimo minuto hoy en ${clubName}`,
+    title: (clubName, dateLabel) =>
+      `Disponibilidad de ultimo minuto ${dateLabel} en ${clubName}`,
     callToAction: "Escribinos para reservar.",
     courtJoiner: "y",
   },
   en: {
-    noSlots: (clubName) =>
-      `We do not see any free courts at ${clubName} today.`,
+    todayLabel: "today",
+    dateLabel: (date) => `on ${date}`,
+    noSlots: (clubName, dateLabel) =>
+      `We do not see any free courts at ${clubName} ${dateLabel}.`,
     noSlotsFollowUp: "We will let you know if one opens up.",
-    title: (clubName) => `Last-minute availability today at ${clubName}`,
+    title: (clubName, dateLabel) =>
+      `Last-minute availability ${dateLabel} at ${clubName}`,
     callToAction: "Message us to book.",
     courtJoiner: "and",
   },
   de: {
-    noSlots: (clubName) =>
-      `Heute sehen wir keine freien Plaetze bei ${clubName}.`,
+    todayLabel: "heute",
+    dateLabel: (date) => `am ${date}`,
+    noSlots: (clubName, dateLabel) =>
+      `Wir sehen ${dateLabel} keine freien Plaetze bei ${clubName}.`,
     noSlotsFollowUp: "Wir sagen dir Bescheid, falls etwas frei wird.",
-    title: (clubName) =>
-      `Last-Minute-Verfuegbarkeit heute bei ${clubName}`,
+    title: (clubName, dateLabel) =>
+      `Last-Minute-Verfuegbarkeit ${dateLabel} bei ${clubName}`,
     callToAction: "Schreib uns, um zu buchen.",
     courtJoiner: "und",
   },
@@ -58,12 +65,19 @@ export function normalizeLanguage(language = "es") {
   return normalized;
 }
 
-export function generateMessage({ clubName, groupedSlots, language = "es" }) {
+export function generateMessage({
+  clubName,
+  groupedSlots,
+  language = "es",
+  date,
+  isToday = !date,
+}) {
   const copy = translations[normalizeLanguage(language)];
+  const dateLabel = isToday ? copy.todayLabel : copy.dateLabel(date);
 
   if (groupedSlots.length === 0) {
     return [
-      copy.noSlots(clubName),
+      copy.noSlots(clubName, dateLabel),
       "",
       copy.noSlotsFollowUp,
     ].join("\n");
@@ -75,7 +89,7 @@ export function generateMessage({ clubName, groupedSlots, language = "es" }) {
   });
 
   return [
-    copy.title(clubName),
+    copy.title(clubName, dateLabel),
     "",
     ...lines,
     "",
